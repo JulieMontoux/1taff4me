@@ -13,8 +13,9 @@ import {
 import { COLUMNS } from '@/lib/kanban'
 import { KanbanColumn } from './KanbanColumn'
 import { ApplicationCard } from './ApplicationCard'
+import { KanbanFilter } from './KanbanFilter'
 
-export function KanbanBoard({ onCardClick, refreshKey }) {
+export function KanbanBoard({ onCardClick, refreshKey, activeTag, onActiveTagChange }) {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -96,8 +97,13 @@ export function KanbanBoard({ onCardClick, refreshKey }) {
     setActiveApp(null)
   }
 
+  const allTags = [...new Set(applications.flatMap((a) => a.tags ?? []))].sort()
+  const displayed = activeTag
+    ? applications.filter((a) => a.tags?.includes(activeTag))
+    : applications
+
   const grouped = COLUMNS.reduce((acc, col) => {
-    acc[col.id] = applications.filter((a) => col.statuses.includes(a.status))
+    acc[col.id] = displayed.filter((a) => col.statuses.includes(a.status))
     return acc
   }, {})
 
@@ -125,6 +131,11 @@ export function KanbanBoard({ onCardClick, refreshKey }) {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
+      <KanbanFilter
+        tags={allTags}
+        activeTag={activeTag}
+        onChange={onActiveTagChange}
+      />
       <div
         className="flex gap-3 overflow-x-auto pb-4"
         style={{ minHeight: 'calc(100vh - 11rem)' }}

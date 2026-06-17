@@ -8,6 +8,7 @@ export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingApp, setEditingApp] = useState(null)
+  const [activeTag, setActiveTag] = useState(null)
 
   function openCreate() {
     setEditingApp(null)
@@ -40,7 +41,12 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      <KanbanBoard refreshKey={refreshKey} onCardClick={openEdit} />
+      <KanbanBoard
+        refreshKey={refreshKey}
+        onCardClick={openEdit}
+        activeTag={activeTag}
+        onActiveTagChange={setActiveTag}
+      />
 
       <ApplicationDrawer
         open={drawerOpen}

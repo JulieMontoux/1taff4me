@@ -25,6 +25,7 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
   const isEdit = !!application
   const [form, setForm] = useState(EMPTY_FORM)
   const [tagInput, setTagInput] = useState('')
+  const [existingTags, setExistingTags] = useState([])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -35,6 +36,10 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
     setErrors({})
     setTagInput('')
     setConfirmDelete(false)
+    fetch('/api/tags')
+      .then((r) => r.json())
+      .then((data) => setExistingTags(Array.isArray(data) ? data : []))
+      .catch(() => {})
     if (application) {
       setForm({
         ...EMPTY_FORM,
@@ -274,42 +279,72 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
 
         {/* Tags */}
         <Field label="Tags">
-          <div
-            className={`${inputCls()} flex flex-wrap gap-1.5 h-auto min-h-[2.5rem] py-1.5 cursor-text`}
-            onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
-          >
-            {form.tags.map((tag) => (
-              <span
-                key={tag}
-                className="flex items-center gap-1 text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded"
-              >
-                #{tag}
-                <button
-                  type="button"
-                  onClick={() => removeTag(tag)}
-                  className="hover:text-violet-900 leading-none"
+          <div className="relative">
+            <div
+              className={`${inputCls()} flex flex-wrap gap-1.5 h-auto min-h-[2.5rem] py-1.5 cursor-text`}
+              onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
+            >
+              {form.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="flex items-center gap-1 text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded"
                 >
-                  ×
-                </button>
-              </span>
-            ))}
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                  e.preventDefault()
-                  addTag(tagInput)
-                }
-                if (e.key === 'Backspace' && !tagInput && form.tags.length > 0) {
-                  removeTag(form.tags[form.tags.length - 1])
-                }
-              }}
-              onBlur={() => { if (tagInput.trim()) addTag(tagInput) }}
-              placeholder={form.tags.length === 0 ? 'react, node… (Entrée)' : ''}
-              className="flex-1 min-w-16 outline-none text-sm bg-transparent"
-            />
+                  #{tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:text-violet-900 leading-none"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault()
+                    addTag(tagInput)
+                  }
+                  if (e.key === 'Backspace' && !tagInput && form.tags.length > 0) {
+                    removeTag(form.tags[form.tags.length - 1])
+                  }
+                }}
+                onBlur={() => { if (tagInput.trim()) addTag(tagInput) }}
+                placeholder={form.tags.length === 0 ? 'react, node… (Entrée)' : ''}
+                className="flex-1 min-w-16 outline-none text-sm bg-transparent"
+              />
+            </div>
+
+            {/* Autocomplete suggestions */}
+            {(() => {
+              const q = tagInput.trim().toLowerCase().replace(/^#/, '')
+              const suggestions = q
+                ? existingTags.filter(
+                    (t) => t.includes(q) && !form.tags.includes(t)
+                  )
+                : []
+              if (suggestions.length === 0) return null
+              return (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        addTag(s)
+                      }}
+                      className="text-xs px-2 py-0.5 bg-gray-100 hover:bg-violet-100 hover:text-violet-700 rounded transition-colors"
+                    >
+                      #{s}
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         </Field>
 
