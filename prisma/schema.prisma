@@ -45,6 +45,7 @@ model Application {
   @@index([userId])
   @@index([userId, status])
   @@index([userId, reminderAt])
+  @@index([userId, createdAt])
 }
 
 model WishlistCompany {

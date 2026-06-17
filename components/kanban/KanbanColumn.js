@@ -1,11 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { ApplicationCard } from './ApplicationCard'
 import { CardSkeleton } from './CardSkeleton'
 
+const PAGE_SIZE = 8
+
 export function KanbanColumn({ column, applications, loading, onCardClick }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
+  const [limit, setLimit] = useState(PAGE_SIZE)
 
   return (
     <div
@@ -47,13 +51,23 @@ export function KanbanColumn({ column, applications, loading, onCardClick }) {
         ) : applications.length === 0 ? (
           <p className="text-xs text-center text-gray-400 pt-8 select-none">Vide</p>
         ) : (
-          applications.map((app) => (
-            <ApplicationCard
-              key={app.id}
-              application={app}
-              onClick={() => onCardClick?.(app)}
-            />
-          ))
+          <>
+            {applications.slice(0, limit).map((app) => (
+              <ApplicationCard
+                key={app.id}
+                application={app}
+                onClick={() => onCardClick?.(app)}
+              />
+            ))}
+            {applications.length > limit && (
+              <button
+                onClick={() => setLimit((l) => l + PAGE_SIZE)}
+                className="w-full text-xs text-gray-400 hover:text-gray-600 py-2 transition-colors"
+              >
+                Voir {Math.min(PAGE_SIZE, applications.length - limit)} de plus ({applications.length - limit} restantes)
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

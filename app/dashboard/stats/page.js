@@ -1,34 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Cell,
-  PieChart,
-  Pie,
-  Legend,
-  AreaChart,
-  Area,
-} from 'recharts'
+import dynamic from 'next/dynamic'
 
-const STATUS_COLORS = {
-  wishlist: '#9ca3af',
-  to_apply: '#38bdf8',
-  applied: '#fbbf24',
-  hr_interview: '#fb923c',
-  tech_interview: '#a78bfa',
-  offer: '#34d399',
-  rejected: '#f87171',
-  abandoned: '#fca5a5',
-}
+const ChartSkeleton = ({ height = 220 }) => (
+  <div className={`bg-gray-100 rounded-lg animate-pulse`} style={{ height }} />
+)
 
-const CONTRACT_COLORS = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626']
+const StatusBarChart = dynamic(
+  () => import('@/components/stats/StatsCharts').then((m) => m.StatusBarChart),
+  { loading: () => <ChartSkeleton />, ssr: false }
+)
+const ContractPieChart = dynamic(
+  () => import('@/components/stats/StatsCharts').then((m) => m.ContractPieChart),
+  { loading: () => <ChartSkeleton />, ssr: false }
+)
+const TimelineAreaChart = dynamic(
+  () => import('@/components/stats/StatsCharts').then((m) => m.TimelineAreaChart),
+  { loading: () => <ChartSkeleton height={180} />, ssr: false }
+)
 
 function KpiCard({ label, value, sub, color = 'gray' }) {
   const colors = {
@@ -42,14 +32,6 @@ function KpiCard({ label, value, sub, color = 'gray' }) {
       <p className="text-xs font-medium opacity-70 mb-1">{label}</p>
       <p className="text-3xl font-black">{value ?? '–'}</p>
       {sub && <p className="text-xs opacity-60 mt-1">{sub}</p>}
-    </div>
-  )
-}
-
-function EmptyState() {
-  return (
-    <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
-      Pas encore de données
     </div>
   )
 }
@@ -99,7 +81,7 @@ export default function StatsPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-gray-900">Statistiques</h1>
 
-      {/* KPIs */}
+      {/* KPIs — paint immediately, no recharts dependency */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Candidatures" value={kpis.total} color="gray" />
         <KpiCard label="En cours" value={kpis.inProgress} color="blue" />
@@ -112,124 +94,23 @@ export default function StatsPage() {
         <KpiCard label="Offres reçues" value={kpis.offers} color="green" />
       </div>
 
-      {/* Bar + Pie */}
+      {/* Charts — lazily loaded, recharts JS deferred */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm font-semibold text-gray-700 mb-4">Par statut</p>
-          {!hasApps ? (
-            <EmptyState />
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={byStatus} barSize={28}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 10, fill: '#6b7280' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 11, fill: '#9ca3af' }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={24}
-                />
-                <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: 12 }}
-                  cursor={{ fill: '#f9fafb' }}
-                />
-                <Bar dataKey="count" name="Candidatures" radius={[4, 4, 0, 0]}>
-                  {byStatus.map((entry) => (
-                    <Cell key={entry.status} fill={STATUS_COLORS[entry.status]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+          <StatusBarChart data={byStatus} hasApps={hasApps} />
         </div>
-
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm font-semibold text-gray-700 mb-4">Par contrat</p>
-          {!hasApps || byContractType.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={byContractType}
-                  dataKey="count"
-                  nameKey="contractType"
-                  cx="50%"
-                  cy="45%"
-                  outerRadius={70}
-                  innerRadius={32}
-                  paddingAngle={3}
-                  label={({ contractType, percent }) =>
-                    percent > 0.07 ? `${contractType} ${Math.round(percent * 100)}%` : ''
-                  }
-                  labelLine={false}
-                >
-                  {byContractType.map((_, i) => (
-                    <Cell key={i} fill={CONTRACT_COLORS[i % CONTRACT_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: 12 }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
+          <ContractPieChart data={byContractType} hasApps={hasApps} />
         </div>
       </div>
 
-      {/* Timeline */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <p className="text-sm font-semibold text-gray-700 mb-4">Candidatures par mois</p>
-        {!hasApps ? (
-          <EmptyState />
-        ) : (
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={timeline}>
-              <defs>
-                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 10, fill: '#9ca3af' }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={{ fontSize: 11, fill: '#9ca3af' }}
-                tickLine={false}
-                axisLine={false}
-                width={24}
-              />
-              <Tooltip
-                contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: 12 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="count"
-                name="Candidatures"
-                stroke="#2563eb"
-                strokeWidth={2}
-                fill="url(#areaGrad)"
-                dot={{ r: 3, fill: '#2563eb', strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
+        <TimelineAreaChart data={timeline} hasApps={hasApps} />
       </div>
 
-      {/* Top villes */}
       {byCity.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm font-semibold text-gray-700 mb-3">Top villes</p>
