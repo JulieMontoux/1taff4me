@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Drawer } from '@/components/ui/Drawer'
+import { ScoreModal } from '@/components/kanban/ScoreModal'
 import { APPLICATION_STATUSES, CONTRACT_TYPES, STATUS_LABELS } from '@/lib/constants'
 
 const EMPTY_FORM = {
@@ -34,6 +35,7 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState(null)
   const [importSuccess, setImportSuccess] = useState(false)
+  const [scoreOpen, setScoreOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -407,7 +409,16 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
         </Field>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+        <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
+          {isEdit && (
+            <button
+              type="button"
+              onClick={() => setScoreOpen(true)}
+              className="w-full px-4 py-2.5 border border-brand-300 dark:border-brand-700 text-brand-700 dark:text-brand-400 rounded-lg text-sm font-medium hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+            >
+              Scorer avec l&apos;IA
+            </button>
+          )}
           <div className="flex gap-2">
             {isEdit && (
               <button type="button" onClick={handleDelete} disabled={deleting}
@@ -426,6 +437,12 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
           </div>
         </div>
       </form>
+
+      <ScoreModal
+        open={scoreOpen}
+        onClose={() => setScoreOpen(false)}
+        application={form}
+      />
     </Drawer>
   )
 }

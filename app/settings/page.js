@@ -77,6 +77,8 @@ function DomainCheckboxes({ values, onChange }) {
   )
 }
 
+const CV_KEY = '1taff4me_cv'
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -87,12 +89,18 @@ export default function SettingsPage() {
   const [emailReminders, setEmailReminders] = useState(false)
   const [favoriteDomains, setFavoriteDomains] = useState([])
   const [favoriteCities, setFavoriteCities] = useState([])
+  const [cvText, setCvText] = useState('')
+  const [cvSaved, setCvSaved] = useState(false)
 
   const [deleteInput, setDeleteInput] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CV_KEY)
+      if (saved) setCvText(saved)
+    } catch {}
     fetch('/api/settings')
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((s) => {
@@ -104,6 +112,19 @@ export default function SettingsPage() {
       .catch(() => setError('Impossible de charger les paramètres.'))
       .finally(() => setLoading(false))
   }, [])
+
+  function handleCvSave() {
+    try {
+      localStorage.setItem(CV_KEY, cvText)
+      setCvSaved(true)
+      setTimeout(() => setCvSaved(false), 2500)
+    } catch {}
+  }
+
+  function handleCvClear() {
+    setCvText('')
+    try { localStorage.removeItem(CV_KEY) } catch {}
+  }
 
   async function handleSave(e) {
     e.preventDefault()
@@ -233,6 +254,46 @@ export default function SettingsPage() {
           )}
         </div>
       </form>
+
+      {/* CV for AI scoring */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">CV (scoring IA)</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Sauvegardé localement dans ton navigateur. Utilisé pour analyser le matching avec tes offres.
+          </p>
+        </div>
+        <textarea
+          value={cvText}
+          onChange={(e) => setCvText(e.target.value)}
+          rows={10}
+          placeholder="Colle ici le texte brut de ton CV…"
+          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/30 resize-none"
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-400 dark:text-gray-500">{cvText.length}/20000 caractères</span>
+          <div className="flex items-center gap-3">
+            {cvSaved && <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Sauvegardé</span>}
+            {cvText && (
+              <button
+                type="button"
+                onClick={handleCvClear}
+                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              >
+                Effacer
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleCvSave}
+              disabled={!cvText.trim()}
+              className="px-4 py-1.5 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-40 transition-colors"
+            >
+              Sauvegarder
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Danger zone */}
       <div className="bg-white rounded-xl border border-red-200 p-5 space-y-4">
