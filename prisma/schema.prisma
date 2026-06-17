@@ -74,11 +74,13 @@ model SearchCache {
 }
 
 model UserSettings {
-  id             String  @id @default(cuid())
-  userId         String  @unique
-  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reminderDays   Int     @default(7)
-  emailReminders Boolean @default(false)
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminderDays     Int      @default(7)
+  emailReminders   Boolean  @default(false)
+  favoriteDomains  String[]
+  favoriteCities   String[]
 }
 
 // NextAuth required models
