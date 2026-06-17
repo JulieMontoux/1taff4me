@@ -30,12 +30,19 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [errors, setErrors] = useState({})
+  const [importUrl, setImportUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState(null)
+  const [importSuccess, setImportSuccess] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setErrors({})
     setTagInput('')
     setConfirmDelete(false)
+    setImportUrl('')
+    setImportError(null)
+    setImportSuccess(false)
     fetch('/api/tags')
       .then((r) => r.json())
       .then((data) => setExistingTags(Array.isArray(data) ? data : []))
@@ -75,6 +82,42 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
 
   function removeTag(tag) {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }))
+  }
+
+  async function handleImport() {
+    const url = importUrl.trim()
+    if (!url) return
+    setImporting(true)
+    setImportError(null)
+    setImportSuccess(false)
+    try {
+      const res = await fetch('/api/parse-offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setImportError(data.error ?? 'Erreur lors de l\'import')
+        return
+      }
+      setForm((prev) => ({
+        ...prev,
+        title: data.title || prev.title,
+        companyName: data.companyName || prev.companyName,
+        city: data.city || prev.city,
+        contractType: data.contractType || prev.contractType,
+        offerUrl: prev.offerUrl || url,
+        notes: data.description
+          ? [prev.notes, data.description].filter(Boolean).join('\n\n')
+          : prev.notes,
+      }))
+      setImportSuccess(true)
+    } catch {
+      setImportError('Erreur réseau')
+    } finally {
+      setImporting(false)
+    }
   }
 
   function validate() {
@@ -164,6 +207,37 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
       title={isEdit ? 'Modifier la candidature' : 'Nouvelle candidature'}
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Import depuis URL */}
+        {!isEdit && (
+          <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+            <p className="text-xs font-semibold text-sky-700 mb-2">Import depuis une offre</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={importUrl}
+                onChange={(e) => { setImportUrl(e.target.value); setImportError(null); setImportSuccess(false) }}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleImport())}
+                placeholder="Coller un lien WTTJ, Indeed, Hellowork…"
+                className="flex-1 px-3 py-1.5 text-sm border border-sky-300 rounded-lg outline-none focus:border-sky-500 bg-white"
+              />
+              <button
+                type="button"
+                onClick={handleImport}
+                disabled={importing || !importUrl.trim()}
+                className="px-3 py-1.5 bg-sky-600 text-white text-sm rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                {importing ? '…' : 'Importer'}
+              </button>
+            </div>
+            {importError && (
+              <p className="mt-1.5 text-xs text-red-600">{importError}</p>
+            )}
+            {importSuccess && (
+              <p className="mt-1.5 text-xs text-green-700">Champs pré-remplis — vérifie et complète.</p>
+            )}
+          </div>
+        )}
+
         {errors._global && (
           <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
             {errors._global}
