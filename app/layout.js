@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
     <html lang="fr">
       <body className={inter.className}>
         <Providers>
-          <div className="flex h-screen bg-gray-50">
+          <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
             <Sidebar />
             <div className="flex flex-col flex-1 overflow-hidden">
               <Header />

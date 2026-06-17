@@ -22,10 +22,10 @@ const TimelineAreaChart = dynamic(
 
 function KpiCard({ label, value, sub, color = 'gray' }) {
   const colors = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
-    orange: 'bg-orange-50 border-orange-200 text-orange-700',
-    green: 'bg-green-50 border-green-200 text-green-700',
-    gray: 'bg-gray-50 border-gray-200 text-gray-700',
+    blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300',
+    orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300',
+    green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300',
+    gray: 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300',
   }
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>
@@ -96,12 +96,12 @@ export default function StatsPage() {
 
       {/* Charts — lazily loaded, recharts JS deferred */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm font-semibold text-gray-700 mb-4">Par statut</p>
+        <div className="md:col-span-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Par statut</p>
           <StatusBarChart data={byStatus} hasApps={hasApps} />
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm font-semibold text-gray-700 mb-4">Par contrat</p>
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Par contrat</p>
           <ContractPieChart data={byContractType} hasApps={hasApps} />
         </div>
       </div>
@@ -112,19 +112,19 @@ export default function StatsPage() {
       </div>
 
       {byCity.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Top villes</p>
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Top villes</p>
           <div className="space-y-2">
             {byCity.map(({ city, count }) => (
               <div key={city} className="flex items-center gap-3">
-                <span className="text-sm text-gray-700 w-28 truncate">{city}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                <span className="text-sm text-gray-700 dark:text-gray-300 w-28 truncate">{city}</span>
+                <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
                   <div
                     className="h-2 bg-brand-500 rounded-full transition-all"
                     style={{ width: `${Math.round((count / byCity[0].count) * 100)}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-500 w-6 text-right">{count}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-6 text-right">{count}</span>
               </div>
             ))}
           </div>

@@ -49,7 +49,7 @@ export function KanbanColumn({ column, applications, loading, onCardClick }) {
             <CardSkeleton />
           </>
         ) : applications.length === 0 ? (
-          <p className="text-xs text-center text-gray-400 pt-8 select-none">Vide</p>
+          <p className="text-xs text-center text-gray-400 dark:text-gray-600 pt-8 select-none">Vide</p>
         ) : (
           <>
             {applications.slice(0, limit).map((app) => (
@@ -62,7 +62,7 @@ export function KanbanColumn({ column, applications, loading, onCardClick }) {
             {applications.length > limit && (
               <button
                 onClick={() => setLimit((l) => l + PAGE_SIZE)}
-                className="w-full text-xs text-gray-400 hover:text-gray-600 py-2 transition-colors"
+                className="w-full text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 py-2 transition-colors"
               >
                 Voir {Math.min(PAGE_SIZE, applications.length - limit)} de plus ({applications.length - limit} restantes)
               </button>

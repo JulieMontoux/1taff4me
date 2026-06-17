@@ -62,9 +62,9 @@ export default function MapPage() {
     <div className="flex flex-col h-full gap-4">
       <div className="flex items-center justify-between flex-shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Carte</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Carte</h1>
           {!loading && (
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {withCity.length} candidature{withCity.length !== 1 ? 's' : ''} géolocalisée{withCity.length !== 1 ? 's' : ''}
               {noCity && ` · ${applications.length - withCity.length} sans ville`}
             </p>
@@ -114,7 +114,7 @@ export default function MapPage() {
       {loading ? (
         <div className="flex-1 bg-gray-100 rounded-xl animate-pulse" />
       ) : withCity.length === 0 && !searchOverlay ? (
-        <div className="flex-1 flex items-center justify-center text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
+        <div className="flex-1 flex items-center justify-center text-gray-400 text-sm bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
           Aucune candidature avec une ville renseignée
         </div>
       ) : (

@@ -33,12 +33,12 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <h1 className="text-xl font-bold text-gray-900">Mes candidatures</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Mes candidatures</h1>
         <div className="flex items-center gap-2">
           <a
             href="/api/applications/export"
             download
-            className="px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             title="Exporter en CSV"
           >
             ↓ CSV

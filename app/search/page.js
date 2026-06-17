@@ -60,10 +60,10 @@ function AddToWishlistButton({ company, city, domain }) {
 
 export function SearchResultCard({ company, city, domain }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-start justify-between gap-3">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-gray-900 truncate">{company.name}</p>
-        {company.address && <p className="text-xs text-gray-500 mt-0.5">{company.address}</p>}
+        {company.address && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{company.address}</p>}
         <div className="flex flex-wrap gap-1.5 mt-1.5">
           {company.domain && (
             <span className="text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full">{company.domain}</span>
@@ -154,12 +154,12 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-xl font-bold text-gray-900">Recherche Géo-Métier</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Recherche Géo-Métier</h1>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
         {/* City */}
         <div className="relative">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ville</label>
           <input
             ref={inputRef}
             type="text"
@@ -194,7 +194,7 @@ export default function SearchPage() {
 
         {/* Domain */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Domaine</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Domaine</label>
           <select
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
@@ -209,7 +209,7 @@ export default function SearchPage() {
 
         {/* Contract type */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contrat</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contrat</label>
           <select
             value={contractType}
             onChange={(e) => setContractType(e.target.value)}

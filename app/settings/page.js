@@ -26,7 +26,7 @@ function TagInput({ label, values, onChange, placeholder }) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{label}</label>
       <div className="flex flex-wrap gap-1.5 mb-2">
         {values.map((v) => (
           <span key={v} className="flex items-center gap-1 text-xs bg-brand-50 text-brand-700 px-2 py-1 rounded-full">
@@ -56,7 +56,7 @@ function DomainCheckboxes({ values, onChange }) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Domaines favoris</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Domaines favoris</label>
       <div className="flex flex-wrap gap-2">
         {DOMAINS.map((d) => (
           <button
@@ -150,20 +150,20 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8 max-w-lg">
-      <h1 className="text-xl font-bold text-gray-900">Paramètres</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Paramètres</h1>
 
       {error && (
         <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>
       )}
 
       {/* Main settings form */}
-      <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 p-5 space-y-6">
+      <form onSubmit={handleSave} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-6">
         {/* Reminders */}
         <div>
           <h2 className="text-sm font-semibold text-gray-800 mb-4">Rappels de relance</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Délai de relance (jours)
               </label>
               <div className="flex items-center gap-3">
@@ -186,7 +186,7 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between py-3 border-t border-gray-100">
               <div>
-                <p className="text-sm font-medium text-gray-700">Rappels par email</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Rappels par email</p>
                 <p className="text-xs text-gray-400">Recevoir un email chaque matin pour les relances dues</p>
               </div>
               <button

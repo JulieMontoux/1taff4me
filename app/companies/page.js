@@ -143,7 +143,7 @@ function CompanyCard({ company, onEdit, onDelete }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-900 truncate">{company.name}</p>
@@ -308,9 +308,9 @@ export default function CompaniesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Entreprises cibles</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Entreprises cibles</h1>
           {!loading && (
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {companies.length} entreprise{companies.length !== 1 ? 's' : ''} en wishlist
             </p>
           )}

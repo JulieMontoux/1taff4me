@@ -209,8 +209,8 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         {/* Import depuis URL */}
         {!isEdit && (
-          <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
-            <p className="text-xs font-semibold text-sky-700 mb-2">Import depuis une offre</p>
+          <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg p-3">
+            <p className="text-xs font-semibold text-sky-700 dark:text-sky-300 mb-2">Import depuis une offre</p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -218,7 +218,7 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
                 onChange={(e) => { setImportUrl(e.target.value); setImportError(null); setImportSuccess(false) }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleImport())}
                 placeholder="Coller un lien WTTJ, Indeed, Hellowork…"
-                className="flex-1 px-3 py-1.5 text-sm border border-sky-300 rounded-lg outline-none focus:border-sky-500 bg-white"
+                className="flex-1 px-3 py-1.5 text-sm border border-sky-300 dark:border-sky-700 rounded-lg outline-none focus:border-sky-500 bg-white dark:bg-gray-800 dark:text-gray-100"
               />
               <button
                 type="button"
@@ -230,16 +230,16 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
               </button>
             </div>
             {importError && (
-              <p className="mt-1.5 text-xs text-red-600">{importError}</p>
+              <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{importError}</p>
             )}
             {importSuccess && (
-              <p className="mt-1.5 text-xs text-green-700">Champs pré-remplis — vérifie et complète.</p>
+              <p className="mt-1.5 text-xs text-green-700 dark:text-green-400">Champs pré-remplis — vérifie et complète.</p>
             )}
           </div>
         )}
 
         {errors._global && (
-          <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
             {errors._global}
           </div>
         )}
@@ -280,28 +280,16 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
         {/* Statut + Contrat */}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Statut">
-            <select
-              value={form.status}
-              onChange={(e) => set('status', e.target.value)}
-              className={inputCls()}
-            >
+            <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputCls()}>
               {APPLICATION_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABELS[s]}
-                </option>
+                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
               ))}
             </select>
           </Field>
           <Field label="Contrat">
-            <select
-              value={form.contractType}
-              onChange={(e) => set('contractType', e.target.value)}
-              className={inputCls()}
-            >
+            <select value={form.contractType} onChange={(e) => set('contractType', e.target.value)} className={inputCls()}>
               {CONTRACT_TYPES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </Field>
@@ -326,7 +314,7 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
               onChange={(e) => set('remote', e.target.checked)}
               className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
             />
-            <span className="text-sm text-gray-700">Remote</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Remote</span>
           </label>
         </div>
 
@@ -359,18 +347,9 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
               onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
             >
               {form.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="flex items-center gap-1 text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded"
-                >
+                <span key={tag} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 rounded">
                   #{tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    className="hover:text-violet-900 leading-none"
-                  >
-                    ×
-                  </button>
+                  <button type="button" onClick={() => removeTag(tag)} className="hover:text-violet-900 dark:hover:text-violet-100 leading-none">×</button>
                 </span>
               ))}
               <input
@@ -378,41 +357,23 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ',') {
-                    e.preventDefault()
-                    addTag(tagInput)
-                  }
-                  if (e.key === 'Backspace' && !tagInput && form.tags.length > 0) {
-                    removeTag(form.tags[form.tags.length - 1])
-                  }
+                  if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput) }
+                  if (e.key === 'Backspace' && !tagInput && form.tags.length > 0) removeTag(form.tags[form.tags.length - 1])
                 }}
                 onBlur={() => { if (tagInput.trim()) addTag(tagInput) }}
                 placeholder={form.tags.length === 0 ? 'react, node… (Entrée)' : ''}
-                className="flex-1 min-w-16 outline-none text-sm bg-transparent"
+                className="flex-1 min-w-16 outline-none text-sm bg-transparent dark:text-gray-100"
               />
             </div>
-
-            {/* Autocomplete suggestions */}
             {(() => {
               const q = tagInput.trim().toLowerCase().replace(/^#/, '')
-              const suggestions = q
-                ? existingTags.filter(
-                    (t) => t.includes(q) && !form.tags.includes(t)
-                  )
-                : []
+              const suggestions = q ? existingTags.filter((t) => t.includes(q) && !form.tags.includes(t)) : []
               if (suggestions.length === 0) return null
               return (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {suggestions.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        addTag(s)
-                      }}
-                      className="text-xs px-2 py-0.5 bg-gray-100 hover:bg-violet-100 hover:text-violet-700 rounded transition-colors"
-                    >
+                    <button key={s} type="button" onMouseDown={(e) => { e.preventDefault(); addTag(s) }}
+                      className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 hover:bg-violet-100 dark:hover:bg-violet-900/40 hover:text-violet-700 dark:hover:text-violet-300 rounded transition-colors">
                       #{s}
                     </button>
                   ))}
@@ -423,38 +384,18 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
         </Field>
 
         {/* Contact */}
-        <div className="border-t border-gray-100 pt-4">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Contact recruteur
-          </p>
+        <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Contact recruteur</p>
           <div className="space-y-3">
             <Field label="Nom">
-              <input
-                type="text"
-                value={form.contactName}
-                onChange={(e) => set('contactName', e.target.value)}
-                placeholder="Marie Dupont"
-                className={inputCls()}
-              />
+              <input type="text" value={form.contactName} onChange={(e) => set('contactName', e.target.value)} placeholder="Marie Dupont" className={inputCls()} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Email" error={errors.contactEmail}>
-                <input
-                  type="text"
-                  value={form.contactEmail}
-                  onChange={(e) => set('contactEmail', e.target.value)}
-                  placeholder="marie@acme.com"
-                  className={inputCls(errors.contactEmail)}
-                />
+                <input type="text" value={form.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} placeholder="marie@acme.com" className={inputCls(errors.contactEmail)} />
               </Field>
               <Field label="LinkedIn" error={errors.contactLinkedin}>
-                <input
-                  type="text"
-                  value={form.contactLinkedin}
-                  onChange={(e) => set('contactLinkedin', e.target.value)}
-                  placeholder="linkedin.com/in/…"
-                  className={inputCls(errors.contactLinkedin)}
-                />
+                <input type="text" value={form.contactLinkedin} onChange={(e) => set('contactLinkedin', e.target.value)} placeholder="linkedin.com/in/…" className={inputCls(errors.contactLinkedin)} />
               </Field>
             </div>
           </div>
@@ -462,44 +403,24 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
 
         {/* Notes */}
         <Field label="Notes">
-          <textarea
-            value={form.notes}
-            onChange={(e) => set('notes', e.target.value)}
-            rows={3}
-            placeholder="Impressions, questions à poser, infos entreprise…"
-            className={`${inputCls()} resize-none`}
-          />
+          <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={3} placeholder="Impressions, questions à poser, infos entreprise…" className={`${inputCls()} resize-none`} />
         </Field>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-gray-100">
+        <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
           <div className="flex gap-2">
             {isEdit && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  confirmDelete
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'border border-red-300 text-red-600 hover:bg-red-50'
-                } disabled:opacity-50`}
-              >
+              <button type="button" onClick={handleDelete} disabled={deleting}
+                className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${confirmDelete ? 'bg-red-600 text-white hover:bg-red-700' : 'border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'} disabled:opacity-50`}>
                 {deleting ? '…' : confirmDelete ? 'Confirmer ?' : 'Supprimer'}
               </button>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-            >
+            <button type="button" onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               Annuler
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
-            >
+            <button type="submit" disabled={saving}
+              className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors">
               {saving ? 'Enregistrement…' : isEdit ? 'Enregistrer' : 'Créer'}
             </button>
           </div>
@@ -512,9 +433,9 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
 function Field({ label, error, children, className = '' }) {
   return (
     <div className={className}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</label>
       {children}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   )
 }
@@ -522,19 +443,15 @@ function Field({ label, error, children, className = '' }) {
 function inputCls(hasError) {
   return [
     'w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors',
+    'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100',
     hasError
-      ? 'border-red-400 focus:ring-2 focus:ring-red-100'
-      : 'border-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100',
+      ? 'border-red-400 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30'
+      : 'border-gray-300 dark:border-gray-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:focus:ring-brand-900/30',
   ].join(' ')
 }
 
 function isValidUrl(url) {
-  try {
-    new URL(url)
-    return true
-  } catch {
-    return false
-  }
+  try { new URL(url); return true } catch { return false }
 }
 
 function isValidEmail(email) {
