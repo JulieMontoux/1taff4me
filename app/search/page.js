@@ -2,19 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-
-const DOMAINS = [
-  'Tech',
-  'Finance',
-  'Santé',
-  'RH',
-  'Marketing',
-  'Commerce',
-  'Industrie',
-  'Conseil',
-]
-
-const CONTRACT_TYPES = ['CDI', 'CDD', 'Alternance', 'Stage', 'Freelance']
+import { DOMAINS, CONTRACT_TYPES } from '@/lib/constants'
 
 async function geocodeCity(query) {
   const res = await fetch(
@@ -28,6 +16,78 @@ async function geocodeCity(query) {
     lat: f.geometry.coordinates[1],
     lng: f.geometry.coordinates[0],
   }))
+}
+
+function AddToWishlistButton({ company, city, domain }) {
+  const [status, setStatus] = useState('idle')
+
+  async function handleAdd() {
+    setStatus('loading')
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: company.name,
+          website: company.website ?? '',
+          domain: domain || company.domain || '',
+          cities: city ? [city] : [],
+          notes: '',
+        }),
+      })
+      setStatus(res.ok ? 'done' : 'error')
+    } catch {
+      setStatus('error')
+    }
+  }
+
+  if (status === 'done') {
+    return (
+      <span className="text-xs text-green-600 font-medium">✓ Ajouté</span>
+    )
+  }
+
+  return (
+    <button
+      onClick={handleAdd}
+      disabled={status === 'loading'}
+      className="text-xs px-2.5 py-1 border border-brand-300 text-brand-700 rounded-lg hover:bg-brand-50 transition-colors disabled:opacity-40"
+    >
+      {status === 'loading' ? '…' : status === 'error' ? 'Erreur, réessayer' : '+ Wishlist'}
+    </button>
+  )
+}
+
+export function SearchResultCard({ company, city, domain }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-start justify-between gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-gray-900 truncate">{company.name}</p>
+        {company.address && <p className="text-xs text-gray-500 mt-0.5">{company.address}</p>}
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {company.domain && (
+            <span className="text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full">{company.domain}</span>
+          )}
+          {company.size && (
+            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{company.size}</span>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        <AddToWishlistButton company={company} city={city} domain={domain} />
+        {company.offerUrl && (
+          <a
+            href={company.offerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:underline"
+          >
+            Voir l&apos;offre →
+          </a>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function SearchPage() {
@@ -142,9 +202,7 @@ export default function SearchPage() {
           >
             <option value="">Tous les domaines</option>
             {DOMAINS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
+              <option key={d} value={d}>{d}</option>
             ))}
           </select>
         </div>
@@ -159,9 +217,7 @@ export default function SearchPage() {
           >
             <option value="">Tous les contrats</option>
             {CONTRACT_TYPES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
@@ -190,11 +246,12 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* Placeholder */}
+      {/* Results placeholder — replaced by real results when #14-15 ship */}
       <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
         <p className="text-gray-400 text-sm">
           Les résultats de recherche (France Travail + enrichissement entreprises) seront affichés ici.
         </p>
+        <p className="text-gray-300 text-xs mt-1">Chaque résultat aura un bouton &quot;+ Wishlist&quot; pour l&apos;ajouter à vos entreprises cibles.</p>
       </div>
     </div>
   )
