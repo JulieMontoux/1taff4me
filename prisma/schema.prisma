@@ -8,17 +8,20 @@ datasource db {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  email             String             @unique
+  id                String              @id @default(cuid())
+  email             String              @unique
   name              String?
   image             String?
-  createdAt         DateTime           @default(now())
+  createdAt         DateTime            @default(now())
   applications      Application[]
   companies         WishlistCompany[]
   settings          UserSettings?
   accounts          Account[]
   sessions          Session[]
   pushSubscriptions PushSubscription[]
+  ownedTeams        Team[]              @relation("OwnedTeams")
+  teamMemberships   TeamMember[]
+  sharedApps        SharedApplication[] @relation("SharedApplications")
 }
 
 model Application {
@@ -42,6 +45,8 @@ model Application {
   reminderAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  sharedWith SharedApplication[]
 
   @@index([userId])
   @@index([userId, status])
@@ -95,6 +100,57 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model Team {
+  id         String              @id @default(cuid())
+  name       String
+  ownerId    String
+  owner      User                @relation("OwnedTeams", fields: [ownerId], references: [id], onDelete: Cascade)
+  members    TeamMember[]
+  invites    TeamInvite[]
+  sharedApps SharedApplication[]
+  createdAt  DateTime            @default(now())
+
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model TeamInvite {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  email     String
+  token     String   @unique @default(cuid())
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([teamId])
+}
+
+model SharedApplication {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  teamId        String
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  sharedById    String
+  sharedBy      User        @relation("SharedApplications", fields: [sharedById], references: [id])
+  sharedAt      DateTime    @default(now())
+
+  @@unique([applicationId, teamId])
+  @@index([teamId])
 }
 
 // NextAuth required models

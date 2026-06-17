@@ -45,6 +45,9 @@ export function ApplicationDrawer({ open, onClose, application, onSaved, initial
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState(false)
   const [scoreOpen, setScoreOpen] = useState(false)
+  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([])
+  const [sharedTeamIds, setSharedTeamIds] = useState<Set<string>>(new Set())
+  const [shareLoading, setShareLoading] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -84,8 +87,42 @@ export function ApplicationDrawer({ open, onClose, application, onSaved, initial
         setImportUrl('')
       }
     }
+    if (application) {
+      fetch('/api/teams').then((r) => r.json()).then(({ ownedTeams, memberTeams }) => {
+        const all = [
+          ...(ownedTeams ?? []),
+          ...(memberTeams ?? []).map((mt: { team: { id: string; name: string } }) => mt.team),
+        ]
+        setTeams(all)
+      }).catch(() => {})
+      fetch(`/api/applications/${application.id}/share`).then((r) => r.json()).then((shared: Array<{ id: string }>) => {
+        setSharedTeamIds(new Set(Array.isArray(shared) ? shared.map((t) => t.id) : []))
+      }).catch(() => {})
+    } else {
+      setTeams([])
+      setSharedTeamIds(new Set())
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, application, initialImportUrl])
+
+  async function toggleShare(teamId: string) {
+    if (!application) return
+    setShareLoading(true)
+    const isShared = sharedTeamIds.has(teamId)
+    try {
+      await fetch(`/api/applications/${application.id}/share`, {
+        method: isShared ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId }),
+      })
+      setSharedTeamIds((prev) => {
+        const next = new Set(prev)
+        isShared ? next.delete(teamId) : next.add(teamId)
+        return next
+      })
+    } catch {}
+    setShareLoading(false)
+  }
 
   function set(field: string, value: unknown) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -425,6 +462,30 @@ export function ApplicationDrawer({ open, onClose, application, onSaved, initial
         <Field label="Notes">
           <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={3} placeholder="Impressions, questions à poser, infos entreprise…" className={`${inputCls()} resize-none`} />
         </Field>
+
+        {/* Share with teams */}
+        {isEdit && teams.length > 0 && (
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Partager avec une équipe</p>
+            <div className="space-y-1.5">
+              {teams.map((team) => (
+                <label key={team.id} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={sharedTeamIds.has(team.id)}
+                    onChange={() => toggleShare(team.id)}
+                    disabled={shareLoading}
+                    className="accent-brand-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{team.name}</span>
+                  {sharedTeamIds.has(team.id) && (
+                    <span className="text-xs text-brand-600 dark:text-brand-400">Partagé</span>
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">

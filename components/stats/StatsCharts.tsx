@@ -98,9 +98,8 @@ export function ContractPieChart({ data, hasApps }: ContractPieChartProps) {
           outerRadius={70}
           innerRadius={32}
           paddingAngle={3}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          label={({ contractType, percent }: any) =>
-            (percent ?? 0) > 0.07 ? `${contractType} ${Math.round((percent ?? 0) * 100)}%` : ''
+          label={(props: { contractType?: string; percent?: number }) =>
+            (props.percent ?? 0) > 0.07 ? `${props.contractType} ${Math.round((props.percent ?? 0) * 100)}%` : ''
           }
           labelLine={false}
         >

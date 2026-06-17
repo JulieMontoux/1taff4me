@@ -10,6 +10,7 @@ const navItems = [
   { href: '/map', label: 'Carte', icon: '🗺️' },
   { href: '/companies', label: 'Entreprises', icon: '🏢' },
   { href: '/dashboard/stats', label: 'Stats', icon: '📊' },
+  { href: '/teams', label: 'Équipes', icon: '👥' },
   { href: '/settings', label: 'Paramètres', icon: '⚙️' },
 ]
 
