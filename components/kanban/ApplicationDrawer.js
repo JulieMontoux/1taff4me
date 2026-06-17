@@ -22,7 +22,7 @@ const EMPTY_FORM = {
   appliedAt: '',
 }
 
-export function ApplicationDrawer({ open, onClose, application, onSaved }) {
+export function ApplicationDrawer({ open, onClose, application, onSaved, initialImportUrl }) {
   const isEdit = !!application
   const [form, setForm] = useState(EMPTY_FORM)
   const [tagInput, setTagInput] = useState('')
@@ -42,14 +42,15 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
     setErrors({})
     setTagInput('')
     setConfirmDelete(false)
-    setImportUrl('')
     setImportError(null)
     setImportSuccess(false)
+    setScoreOpen(false)
     fetch('/api/tags')
       .then((r) => r.json())
       .then((data) => setExistingTags(Array.isArray(data) ? data : []))
       .catch(() => {})
     if (application) {
+      setImportUrl('')
       setForm({
         ...EMPTY_FORM,
         ...application,
@@ -66,8 +67,16 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
       })
     } else {
       setForm(EMPTY_FORM)
+      if (initialImportUrl) {
+        setImportUrl(initialImportUrl)
+        // Auto-trigger parse-offer after state settles
+        setTimeout(() => handleImport(initialImportUrl), 0)
+      } else {
+        setImportUrl('')
+      }
     }
-  }, [open, application])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, application, initialImportUrl])
 
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -86,8 +95,8 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }))
   }
 
-  async function handleImport() {
-    const url = importUrl.trim()
+  async function handleImport(urlOverride) {
+    const url = (urlOverride ?? importUrl).trim()
     if (!url) return
     setImporting(true)
     setImportError(null)
@@ -224,7 +233,7 @@ export function ApplicationDrawer({ open, onClose, application, onSaved }) {
               />
               <button
                 type="button"
-                onClick={handleImport}
+                onClick={() => handleImport()}
                 disabled={importing || !importUrl.trim()}
                 className="px-3 py-1.5 bg-sky-600 text-white text-sm rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors whitespace-nowrap"
               >

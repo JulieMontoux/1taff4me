@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { KanbanBoard } from '@/components/kanban/KanbanBoard'
 import { ApplicationDrawer } from '@/components/kanban/ApplicationDrawer'
 import { RemindersBar } from '@/components/kanban/RemindersBar'
@@ -12,13 +12,29 @@ export default function DashboardPage() {
   const [editingApp, setEditingApp] = useState(null)
   const [activeTag, setActiveTag] = useState(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [initialImportUrl, setInitialImportUrl] = useState(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const importUrl = params.get('import')
+    if (importUrl) {
+      setInitialImportUrl(importUrl)
+      setEditingApp(null)
+      setDrawerOpen(true)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('import')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [])
 
   function openCreate() {
+    setInitialImportUrl(null)
     setEditingApp(null)
     setDrawerOpen(true)
   }
 
   function openEdit(app) {
+    setInitialImportUrl(null)
     setEditingApp(app)
     setDrawerOpen(true)
   }
@@ -26,6 +42,7 @@ export default function DashboardPage() {
   function handleClose() {
     setDrawerOpen(false)
     setEditingApp(null)
+    setInitialImportUrl(null)
   }
 
   function handleSaved() {
@@ -75,6 +92,7 @@ export default function DashboardPage() {
         onClose={handleClose}
         application={editingApp}
         onSaved={handleSaved}
+        initialImportUrl={initialImportUrl}
       />
 
       <ImportModal
