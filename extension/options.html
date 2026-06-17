@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>1taff4me — Options</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      color: #111827;
+      background: #f9fafb;
+      padding: 32px;
+      max-width: 480px;
+    }
+    h1 { font-size: 18px; font-weight: 700; color: #7c3aed; margin-bottom: 24px; }
+    label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
+    p.hint { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 14px;
+      outline: none;
+      background: white;
+      color: #111827;
+    }
+    input[type="text"]:focus { border-color: #7c3aed; box-shadow: 0 0 0 2px #ede9fe; }
+    .row { margin-bottom: 20px; }
+    button {
+      padding: 9px 20px;
+      background: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #6d28d9; }
+    #saved { display: none; font-size: 13px; color: #16a34a; margin-left: 12px; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <h1>1taff4me — Options</h1>
+
+  <div class="row">
+    <label for="app-url">URL de votre instance</label>
+    <input type="text" id="app-url" placeholder="https://1taff4me.vercel.app" />
+    <p class="hint">L'URL de base de votre application 1taff4me (sans slash final).</p>
+  </div>
+
+  <div style="display:flex;align-items:center;">
+    <button id="save-btn">Enregistrer</button>
+    <span id="saved">✓ Sauvegardé</span>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
