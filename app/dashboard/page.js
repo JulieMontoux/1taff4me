@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { KanbanBoard } from '@/components/kanban/KanbanBoard'
 import { ApplicationDrawer } from '@/components/kanban/ApplicationDrawer'
 import { RemindersBar } from '@/components/kanban/RemindersBar'
+import { ImportModal } from '@/components/kanban/ImportModal'
 
 export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingApp, setEditingApp] = useState(null)
   const [activeTag, setActiveTag] = useState(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   function openCreate() {
     setEditingApp(null)
@@ -44,6 +46,13 @@ export default function DashboardPage() {
             ↓ CSV
           </a>
           <button
+            onClick={() => setImportOpen(true)}
+            className="px-3 py-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            title="Importer un CSV"
+          >
+            ↑ Import
+          </button>
+          <button
             onClick={openCreate}
             className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-semibold hover:bg-brand-700 transition-colors"
           >
@@ -66,6 +75,12 @@ export default function DashboardPage() {
         onClose={handleClose}
         application={editingApp}
         onSaved={handleSaved}
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={handleSaved}
       />
     </div>
   )
