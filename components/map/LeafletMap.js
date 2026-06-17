@@ -26,13 +26,27 @@ const STATUS_LABELS = {
   abandoned: 'Abandonnée',
 }
 
-function makeIcon(color) {
+const COMPANY_COLOR = '#7c3aed'
+
+function makeIcon(color, size = 14) {
   return L.divIcon({
     className: '',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-    popupAnchor: [0, -10],
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -(size / 2 + 2)],
+  })
+}
+
+function makeCompanyIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:18px;height:18px;border-radius:4px;background:${COMPANY_COLOR};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center">
+      <span style="font-size:10px;line-height:1">🏢</span>
+    </div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -12],
   })
 }
 
@@ -73,7 +87,17 @@ function FitBounds({ positions }) {
   return null
 }
 
-export default function LeafletMap({ applications }) {
+function ZoomToPoint({ lat, lng }) {
+  const map = useMap()
+  useEffect(() => {
+    if (lat != null && lng != null) {
+      map.setView([lat, lng], 11, { animate: true })
+    }
+  }, [lat, lng, map])
+  return null
+}
+
+export default function LeafletMap({ applications, searchOverlay }) {
   const [markers, setMarkers] = useState([])
   const [geocoding, setGeocoding] = useState(false)
   const geocacheRef = useRef({})
@@ -112,8 +136,9 @@ export default function LeafletMap({ applications }) {
     run()
   }, [applications])
 
-  const positions = markers.map((m) => m.position)
+  const appPositions = markers.map((m) => m.position)
   const activeStatuses = [...new Set(applications.map((a) => a.status))]
+  const hasOverlay = searchOverlay && (searchOverlay.companies?.length > 0 || searchOverlay.lat != null)
 
   return (
     <div className="relative w-full h-full">
@@ -134,8 +159,14 @@ export default function LeafletMap({ applications }) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {positions.length > 0 && <FitBounds positions={positions} />}
+        {/* Zoom to search city if overlay active, otherwise fit application bounds */}
+        {hasOverlay && searchOverlay.lat != null ? (
+          <ZoomToPoint lat={searchOverlay.lat} lng={searchOverlay.lng} />
+        ) : (
+          appPositions.length > 0 && <FitBounds positions={appPositions} />
+        )}
 
+        {/* Application markers */}
         {markers.map(({ app, position }) => (
           <Marker key={app.id} position={position} icon={makeIcon(STATUS_COLORS[app.status] ?? '#9ca3af')}>
             <Popup maxWidth={220}>
@@ -168,10 +199,53 @@ export default function LeafletMap({ applications }) {
             </Popup>
           </Marker>
         ))}
+
+        {/* Search overlay company markers */}
+        {searchOverlay?.companies?.map((company, i) => (
+          <Marker
+            key={`company-${i}`}
+            position={[company.lat, company.lng]}
+            icon={makeCompanyIcon()}
+          >
+            <Popup maxWidth={220}>
+              <div className="text-sm space-y-1">
+                <p className="font-semibold text-gray-900 leading-tight">{company.name}</p>
+                {company.address && <p className="text-gray-500 text-xs">{company.address}</p>}
+                {company.domain && (
+                  <span className="inline-block text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+                    {company.domain}
+                  </span>
+                )}
+                {company.offerUrl && (
+                  <div>
+                    <a
+                      href={company.offerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline text-xs"
+                    >
+                      Voir l&apos;offre →
+                    </a>
+                  </div>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
 
+      {/* Application status legend */}
       {activeStatuses.length > 0 && (
         <div className="absolute bottom-4 right-4 z-[1000] bg-white rounded-xl border border-gray-200 shadow p-3 space-y-1.5">
+          {hasOverlay && (
+            <div className="flex items-center gap-2 text-xs text-gray-700 pb-1.5 border-b border-gray-100">
+              <span
+                className="w-3 h-3 rounded-sm flex-shrink-0"
+                style={{ background: COMPANY_COLOR }}
+              />
+              Entreprises
+            </div>
+          )}
           {activeStatuses.map((s) => (
             <div key={s} className="flex items-center gap-2 text-xs text-gray-700">
               <span
