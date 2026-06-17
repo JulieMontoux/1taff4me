@@ -1,6 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import * as cheerio from 'cheerio'
+import { promises as dns } from 'dns'
+
+const MAX_RESPONSE_BYTES = 2 * 1024 * 1024 // 2 MB
 
 // In-memory rate limit — resets on cold start, good enough for v1
 const rateLimitMap = new Map()
@@ -17,13 +20,29 @@ function checkRateLimit(userId) {
   return true
 }
 
-function isSafeUrl(urlStr) {
+function isPrivateIp(ip) {
+  if (!ip) return true
+  // IPv4 loopback, unspecified, link-local, private ranges
+  if (/^(127\.|0\.|10\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/.test(ip)) return true
+  // IPv6 loopback and private
+  if (ip === '::1' || ip === '::' || /^(fc|fd|fe80)/i.test(ip)) return true
+  return false
+}
+
+async function isSafeUrl(urlStr) {
   let url
   try { url = new URL(urlStr) } catch { return false }
   if (!['http:', 'https:'].includes(url.protocol)) return false
   const h = url.hostname.toLowerCase()
+  // Block known-bad hostnames before DNS
   if (['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(h)) return false
-  if (/^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)/.test(h)) return false
+  // Resolve hostname → check resolved IP (prevents DNS rebinding)
+  try {
+    const { address } = await dns.lookup(h, { verbatim: false })
+    if (isPrivateIp(address)) return false
+  } catch {
+    return false // unresolvable = deny
+  }
   return true
 }
 
@@ -128,7 +147,7 @@ export async function POST(request) {
     return Response.json({ error: 'Champ url requis' }, { status: 400 })
   }
 
-  if (!isSafeUrl(url)) {
+  if (!(await isSafeUrl(url))) {
     return Response.json({ error: 'URL invalide' }, { status: 400 })
   }
 
@@ -160,7 +179,11 @@ export async function POST(request) {
       )
     }
 
-    html = await res.text()
+    const buf = await res.arrayBuffer()
+    if (buf.byteLength > MAX_RESPONSE_BYTES) {
+      return Response.json({ error: 'Page trop volumineuse' }, { status: 422 })
+    }
+    html = new TextDecoder().decode(buf)
   } catch (err) {
     if (err.name === 'TimeoutError') {
       return Response.json({ error: 'Timeout — site trop lent' }, { status: 422 })
