@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { signOut } from 'next-auth/react'
 import { DOMAINS } from '@/lib/constants'
+import { PushToggle } from '@/components/ui/PushToggle'
 
 function TagInput({ label, values, onChange, placeholder }) {
   const [input, setInput] = useState('')
@@ -205,16 +206,16 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div className="flex items-center justify-between py-3 border-t border-gray-100">
+            <div className="flex items-center justify-between py-3 border-t border-gray-100 dark:border-gray-800">
               <div>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Rappels par email</p>
-                <p className="text-xs text-gray-400">Recevoir un email chaque matin pour les relances dues</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Recevoir un email chaque matin pour les relances dues</p>
               </div>
               <button
                 type="button"
                 onClick={() => setEmailReminders((v) => !v)}
                 className={`relative w-11 h-6 rounded-full transition-colors ${
-                  emailReminders ? 'bg-brand-600' : 'bg-gray-200'
+                  emailReminders ? 'bg-brand-600' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               >
                 <span
@@ -223,6 +224,10 @@ export default function SettingsPage() {
                   }`}
                 />
               </button>
+            </div>
+
+            <div className="py-3 border-t border-gray-100 dark:border-gray-800">
+              <PushToggle />
             </div>
           </div>
         </div>
