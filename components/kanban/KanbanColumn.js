@@ -1,12 +1,26 @@
+'use client'
+
+import { useDroppable } from '@dnd-kit/core'
 import { ApplicationCard } from './ApplicationCard'
 import { CardSkeleton } from './CardSkeleton'
 
 export function KanbanColumn({ column, applications, loading, onCardClick }) {
+  const { setNodeRef, isOver } = useDroppable({ id: column.id })
+
   return (
     <div
-      className={`flex-shrink-0 w-64 flex flex-col rounded-xl border ${column.border} ${column.bg}`}
+      className={[
+        'flex-shrink-0 w-64 flex flex-col rounded-xl border transition-colors',
+        isOver ? 'border-brand-400' : column.border,
+        column.bg,
+      ].join(' ')}
     >
-      <div className={`flex items-center justify-between px-3 py-2.5 border-b ${column.border}`}>
+      <div
+        className={[
+          'flex items-center justify-between px-3 py-2.5 border-b transition-colors',
+          isOver ? 'border-brand-400' : column.border,
+        ].join(' ')}
+      >
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${column.dot}`} />
           <h3 className={`text-sm font-semibold ${column.text}`}>{column.label}</h3>
@@ -18,7 +32,13 @@ export function KanbanColumn({ column, applications, loading, onCardClick }) {
         )}
       </div>
 
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto min-h-24">
+      <div
+        ref={setNodeRef}
+        className={[
+          'flex-1 p-2 space-y-2 overflow-y-auto min-h-24 rounded-b-xl transition-colors',
+          isOver ? 'bg-brand-50/40' : '',
+        ].join(' ')}
+      >
         {loading ? (
           <>
             <CardSkeleton />

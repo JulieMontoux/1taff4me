@@ -1,19 +1,35 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from '@dnd-kit/core'
 import { COLUMNS } from '@/lib/kanban'
 import { KanbanColumn } from './KanbanColumn'
+import { ApplicationCard } from './ApplicationCard'
 
-export function KanbanBoard({ onCardClick, onAddClick, refreshKey }) {
+export function KanbanBoard({ onCardClick, refreshKey }) {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [activeApp, setActiveApp] = useState(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+  )
 
   const fetchApplications = useCallback(() => {
     setLoading(true)
     fetch('/api/applications')
       .then((r) => {
-        if (!r.ok) throw new Error('Fetch failed')
+        if (!r.ok) throw new Error()
         return r.json()
       })
       .then((data) => {
@@ -27,6 +43,58 @@ export function KanbanBoard({ onCardClick, onAddClick, refreshKey }) {
   useEffect(() => {
     fetchApplications()
   }, [fetchApplications, refreshKey])
+
+  function handleDragStart({ active }) {
+    const app = applications.find((a) => a.id === active.id)
+    setActiveApp(app ?? null)
+  }
+
+  function handleDragEnd({ active, over }) {
+    setActiveApp(null)
+    if (!over) return
+
+    const targetColumn = COLUMNS.find((c) => c.id === over.id)
+    if (!targetColumn) return
+
+    const app = applications.find((a) => a.id === active.id)
+    if (!app) return
+
+    const sourceColumn = COLUMNS.find((c) => c.statuses.includes(app.status))
+    if (sourceColumn?.id === targetColumn.id) return
+
+    const newStatus = targetColumn.id === 'rejected' ? 'rejected' : targetColumn.id
+
+    // Optimistic update immediately
+    setApplications((prev) =>
+      prev.map((a) => (a.id === app.id ? { ...a, status: newStatus } : a))
+    )
+
+    fetch(`/api/applications/${app.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error()
+        return r.json()
+      })
+      .then((updated) => {
+        // Sync server response (auto-set appliedAt/reminderAt from API)
+        setApplications((prev) =>
+          prev.map((a) => (a.id === updated.id ? updated : a))
+        )
+      })
+      .catch(() => {
+        // Revert on failure
+        setApplications((prev) =>
+          prev.map((a) => (a.id === app.id ? app : a))
+        )
+      })
+  }
+
+  function handleDragCancel() {
+    setActiveApp(null)
+  }
 
   const grouped = COLUMNS.reduce((acc, col) => {
     acc[col.id] = applications.filter((a) => col.statuses.includes(a.status))
@@ -50,16 +118,33 @@ export function KanbanBoard({ onCardClick, onAddClick, refreshKey }) {
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 11rem)' }}>
-      {COLUMNS.map((col) => (
-        <KanbanColumn
-          key={col.id}
-          column={col}
-          applications={grouped[col.id] ?? []}
-          loading={loading}
-          onCardClick={onCardClick}
-        />
-      ))}
-    </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div
+        className="flex gap-3 overflow-x-auto pb-4"
+        style={{ minHeight: 'calc(100vh - 11rem)' }}
+      >
+        {COLUMNS.map((col) => (
+          <KanbanColumn
+            key={col.id}
+            column={col}
+            applications={grouped[col.id] ?? []}
+            loading={loading}
+            onCardClick={onCardClick}
+          />
+        ))}
+      </div>
+
+      <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.18,0.67,0.6,1.22)' }}>
+        {activeApp ? (
+          <ApplicationCard application={activeApp} isDragOverlay />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   )
 }

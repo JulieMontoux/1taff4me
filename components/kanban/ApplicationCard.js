@@ -1,8 +1,14 @@
 'use client'
 
+import { useDraggable } from '@dnd-kit/core'
 import { formatDate, isReminderDue } from '@/lib/kanban'
 
-export function ApplicationCard({ application, onClick }) {
+export function ApplicationCard({ application, onClick, isDragOverlay = false }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: application.id,
+    disabled: isDragOverlay,
+  })
+
   const {
     title,
     companyName,
@@ -19,14 +25,25 @@ export function ApplicationCard({ application, onClick }) {
 
   return (
     <div
+      ref={isDragOverlay ? undefined : setNodeRef}
+      {...(isDragOverlay ? {} : attributes)}
+      {...(isDragOverlay ? {} : listeners)}
       onClick={onClick}
-      className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group"
+      className={[
+        'bg-white rounded-lg border border-gray-200 p-3 shadow-sm select-none group',
+        isDragOverlay
+          ? 'rotate-1 shadow-xl cursor-grabbing'
+          : 'cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all',
+        isDragging ? 'opacity-30' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       <div className="flex items-start justify-between gap-2 mb-1">
         <h4 className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 flex-1">
           {title}
         </h4>
-        {reminderDue && (
+        {reminderDue && !isDragOverlay && (
           <span
             title="À relancer"
             className="flex-shrink-0 w-2 h-2 rounded-full bg-orange-400 mt-1 animate-pulse"
@@ -71,7 +88,7 @@ export function ApplicationCard({ application, onClick }) {
         <span className="text-xs text-gray-400">
           {appliedAt ? formatDate(appliedAt) : ''}
         </span>
-        {offerUrl && (
+        {offerUrl && !isDragOverlay && (
           <a
             href={offerUrl}
             target="_blank"
