@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { KanbanBoard } from '@/components/kanban/KanbanBoard'
 import { ApplicationDrawer } from '@/components/kanban/ApplicationDrawer'
+import { RemindersBar } from '@/components/kanban/RemindersBar'
 
 export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0)
@@ -40,6 +41,8 @@ export default function DashboardPage() {
           + Nouvelle candidature
         </button>
       </div>
+
+      <RemindersBar onOpenApp={openEdit} refreshKey={refreshKey} />
 
       <KanbanBoard
         refreshKey={refreshKey}

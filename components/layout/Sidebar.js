@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { RemindersCount } from './RemindersCount'
 
 const navItems = [
   { href: '/dashboard', label: 'Candidatures', icon: '📋' },
@@ -37,6 +38,7 @@ export function Sidebar() {
                 >
                   <span className="text-base">{icon}</span>
                   <span>{label}</span>
+                  {href === '/dashboard' && <RemindersCount />}
                 </Link>
               </li>
             )
