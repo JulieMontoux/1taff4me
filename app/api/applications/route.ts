@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { authenticate } from '@/lib/api-auth'
 import { createApplicationSchema } from '@/lib/validations'
 
 export async function GET(request: Request) {
@@ -30,8 +31,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
+  const user = await authenticate(request)
+  if (!user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     }
     if (!data.reminderAt) {
       const settings = await prisma.userSettings.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
       })
       const days = settings?.reminderDays ?? 7
       data.reminderAt = new Date(
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
     const application = await prisma.application.create({
       data: {
         ...data,
-        userId: session.user.id,
+        userId: user.id,
         appliedAt: data.appliedAt ? new Date(data.appliedAt) : null,
         reminderAt: data.reminderAt ? new Date(data.reminderAt) : null,
       },

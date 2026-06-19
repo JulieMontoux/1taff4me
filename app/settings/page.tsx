@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { signOut } from 'next-auth/react'
 import { DOMAINS } from '@/lib/constants'
 import { PushToggle } from '@/components/ui/PushToggle'
@@ -80,6 +80,15 @@ function DomainCheckboxes({ values, onChange }: { values: string[]; onChange: (v
 
 const CV_KEY = '1taff4me_cv'
 
+type GmailApp = {
+  title: string
+  companyName: string
+  platform: string
+  appliedAt: string
+  offerUrl: string | null
+  city: string | null
+}
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -93,14 +102,56 @@ export default function SettingsPage() {
   const [cvText, setCvText] = useState('')
   const [cvSaved, setCvSaved] = useState(false)
 
+  // API token
+  const [apiToken, setApiToken] = useState<string | null>(null)
+  const [tokenVisible, setTokenVisible] = useState(false)
+  const [tokenCopied, setTokenCopied] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+
+  // iCloud
+  const ICLOUD_KEY = '1taff4me_icloud'
+  const [icloudEmail, setIcloudEmail] = useState('')
+  const [icloudPassword, setIcloudPassword] = useState('')
+  const [icloudPasswordVisible, setIcloudPasswordVisible] = useState(false)
+  const [icloudImporting, setIcloudImporting] = useState(false)
+  const [icloudApps, setIcloudApps] = useState<GmailApp[] | null>(null)
+  const [icloudSelected, setIcloudSelected] = useState<Set<number>>(new Set())
+  const [icloudImportDone, setIcloudImportDone] = useState(false)
+  const [confirmingIcloud, setConfirmingIcloud] = useState(false)
+  const [icloudError, setIcloudError] = useState<string | null>(null)
+
+  // Gmail
+  const [gmailConnected, setGmailConnected] = useState(false)
+  const [gmailImporting, setGmailImporting] = useState(false)
+  const [gmailApps, setGmailApps] = useState<GmailApp[] | null>(null)
+  const [gmailSelected, setGmailSelected] = useState<Set<number>>(new Set())
+  const [gmailImportDone, setGmailImportDone] = useState(false)
+  const [confirmingImport, setConfirmingImport] = useState(false)
+
   const [deleteInput, setDeleteInput] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const checkGmailStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/gmail/status')
+      if (res.ok) {
+        const data = await res.json()
+        setGmailConnected(data.connected)
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(CV_KEY)
       if (saved) setCvText(saved)
+      const icloud = localStorage.getItem(ICLOUD_KEY)
+      if (icloud) {
+        const parsed = JSON.parse(icloud)
+        setIcloudEmail(parsed.email ?? '')
+        setIcloudPassword(parsed.password ?? '')
+      }
     } catch {}
     fetch('/api/settings')
       .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -109,10 +160,165 @@ export default function SettingsPage() {
         setEmailReminders(s.emailReminders ?? false)
         setFavoriteDomains(s.favoriteDomains ?? [])
         setFavoriteCities(s.favoriteCities ?? [])
+        setApiToken(s.apiToken ?? null)
       })
       .catch(() => setError('Impossible de charger les paramètres.'))
       .finally(() => setLoading(false))
+
+    checkGmailStatus()
+  }, [checkGmailStatus])
+
+  // Handle Gmail OAuth callback redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const gmail = params.get('gmail')
+    if (gmail === 'connected') {
+      setGmailConnected(true)
+      window.history.replaceState({}, '', '/settings')
+    } else if (gmail === 'error') {
+      setError('Erreur lors de la connexion Gmail. Réessaie.')
+      window.history.replaceState({}, '', '/settings')
+    }
   }, [])
+
+  async function handleRegenerateToken() {
+    setRegenerating(true)
+    try {
+      const res = await fetch('/api/settings', { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setApiToken(data.apiToken)
+        setTokenVisible(true)
+      }
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  function handleCopyToken() {
+    if (!apiToken) return
+    navigator.clipboard.writeText(apiToken).then(() => {
+      setTokenCopied(true)
+      setTimeout(() => setTokenCopied(false), 2000)
+    })
+  }
+
+  async function handleGmailImport() {
+    setGmailImporting(true)
+    setGmailApps(null)
+    setGmailImportDone(false)
+    try {
+      const res = await fetch('/api/gmail/import', { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setGmailApps(data.applications)
+        setGmailSelected(new Set(data.applications.map((_: GmailApp, i: number) => i)))
+      } else {
+        setError('Erreur lors de l\'import Gmail.')
+      }
+    } catch {
+      setError('Erreur lors de l\'import Gmail.')
+    } finally {
+      setGmailImporting(false)
+    }
+  }
+
+  async function handleConfirmGmailImport() {
+    if (!gmailApps) return
+    setConfirmingImport(true)
+    const selected = gmailApps.filter((_, i) => gmailSelected.has(i))
+    try {
+      const res = await fetch('/api/applications/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          selected.map((a) => ({
+            title: a.title,
+            companyName: a.companyName,
+            offerUrl: a.offerUrl,
+            city: a.city,
+            status: 'applied',
+            appliedAt: a.appliedAt,
+            tags: [a.platform],
+          }))
+        ),
+      })
+      if (res.ok) {
+        setGmailApps(null)
+        setGmailImportDone(true)
+      }
+    } finally {
+      setConfirmingImport(false)
+    }
+  }
+
+  async function handleDisconnectGmail() {
+    await fetch('/api/gmail/disconnect', { method: 'DELETE' })
+    setGmailConnected(false)
+    setGmailApps(null)
+  }
+
+  function saveIcloudCredentials() {
+    try {
+      localStorage.setItem(ICLOUD_KEY, JSON.stringify({ email: icloudEmail, password: icloudPassword }))
+    } catch {}
+  }
+
+  async function handleIcloudImport() {
+    if (!icloudEmail || !icloudPassword) return
+    setIcloudImporting(true)
+    setIcloudApps(null)
+    setIcloudImportDone(false)
+    setIcloudError(null)
+    saveIcloudCredentials()
+    try {
+      const res = await fetch('/api/icloud/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: icloudEmail, password: icloudPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setIcloudError(data.error ?? 'Erreur lors de l\'import.')
+      } else {
+        setIcloudApps(data.applications)
+        setIcloudSelected(new Set(data.applications.map((_: GmailApp, i: number) => i)))
+      }
+    } catch {
+      setIcloudError('Erreur réseau.')
+    } finally {
+      setIcloudImporting(false)
+    }
+  }
+
+  async function handleConfirmIcloudImport() {
+    if (!icloudApps) return
+    setConfirmingIcloud(true)
+    const selected = icloudApps.filter((_, i) => icloudSelected.has(i))
+    try {
+      const res = await fetch('/api/applications/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          selected.map((a) => ({
+            title: a.title,
+            companyName: a.companyName,
+            offerUrl: a.offerUrl,
+            city: a.city,
+            status: 'applied',
+            appliedAt: a.appliedAt,
+            tags: [a.platform],
+          }))
+        ),
+      })
+      if (res.ok) {
+        setIcloudApps(null)
+        setIcloudImportDone(true)
+      }
+    } finally {
+      setConfirmingIcloud(false)
+    }
+  }
 
   function handleCvSave() {
     try {
@@ -298,6 +504,276 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Integrations */}
+      <div id="integrations" className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-6">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Intégrations automatiques</h2>
+
+        {/* Extension API token */}
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Extension navigateur</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              Copie ce token dans les options de l&apos;extension pour activer la détection automatique des candidatures (APEC, Indeed, LinkedIn, WTTJ, HelloWork).
+            </p>
+          </div>
+          {apiToken ? (
+            <div className="flex items-center gap-2">
+              <input
+                type={tokenVisible ? 'text' : 'password'}
+                readOnly
+                value={apiToken}
+                className="flex-1 font-mono text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300"
+              />
+              <button
+                type="button"
+                onClick={() => setTokenVisible((v) => !v)}
+                className="px-3 py-2 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50"
+              >
+                {tokenVisible ? 'Cacher' : 'Voir'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyToken}
+                className="px-3 py-2 text-xs bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700"
+              >
+                {tokenCopied ? '✓ Copié' : 'Copier'}
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">Chargement…</p>
+          )}
+          <button
+            type="button"
+            onClick={handleRegenerateToken}
+            disabled={regenerating}
+            className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-40"
+          >
+            {regenerating ? 'Régénération…' : 'Régénérer le token'}
+          </button>
+        </div>
+
+        {/* Gmail import */}
+        <div className="border-t border-gray-100 dark:border-gray-800 pt-5 space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Import Gmail</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              Connecte Gmail pour importer automatiquement toutes tes candidatures passées à partir des emails de confirmation.
+            </p>
+          </div>
+
+          {!gmailConnected ? (
+            <a
+              href="/api/gmail/connect"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Connecter Gmail
+            </a>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-3 py-1 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                  Gmail connecté
+                </span>
+                <button
+                  type="button"
+                  onClick={handleDisconnectGmail}
+                  className="text-xs text-gray-400 hover:text-red-500"
+                >
+                  Déconnecter
+                </button>
+              </div>
+
+              {!gmailImportDone && (
+                <button
+                  type="button"
+                  onClick={handleGmailImport}
+                  disabled={gmailImporting}
+                  className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-40"
+                >
+                  {gmailImporting ? 'Analyse des emails…' : 'Importer les candidatures'}
+                </button>
+              )}
+
+              {gmailImportDone && (
+                <p className="text-sm text-green-600 font-medium">✓ Import terminé !</p>
+              )}
+
+              {gmailApps && gmailApps.length === 0 && (
+                <p className="text-sm text-gray-500">Aucun email de candidature trouvé.</p>
+              )}
+
+              {gmailApps && gmailApps.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600 font-medium">
+                    {gmailApps.length} candidature{gmailApps.length > 1 ? 's' : ''} trouvée{gmailApps.length > 1 ? 's' : ''} — sélectionne celles à importer :
+                  </p>
+                  <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-lg divide-y divide-gray-100">
+                    {gmailApps.map((app, i) => (
+                      <label key={i} className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={gmailSelected.has(i)}
+                          onChange={() => {
+                            const next = new Set(gmailSelected)
+                            if (next.has(i)) next.delete(i)
+                            else next.add(i)
+                            setGmailSelected(next)
+                          }}
+                          className="mt-0.5 accent-brand-600"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{app.title}</p>
+                          <p className="text-xs text-gray-500">{app.companyName} · {app.platform}{app.city ? ` · ${app.city}` : ''}</p>
+                          <p className="text-xs text-gray-400">{new Date(app.appliedAt).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleConfirmGmailImport}
+                      disabled={gmailSelected.size === 0 || confirmingImport}
+                      className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-40"
+                    >
+                      {confirmingImport ? 'Import…' : `Importer ${gmailSelected.size} candidature${gmailSelected.size > 1 ? 's' : ''}`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGmailApps(null)}
+                      className="text-sm text-gray-400 hover:text-gray-600"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* iCloud import */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Import iCloud Mail</h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Connecte ton iCloud Mail pour importer tes emails de confirmation de candidature (APEC, Indeed, LinkedIn, WTTJ, HelloWork).
+            Utilise un <strong>App-Specific Password</strong> généré sur{' '}
+            <a href="https://appleid.apple.com" target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">appleid.apple.com</a>{' '}
+            → Sécurité → Mots de passe spécifiques aux apps.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Email iCloud</label>
+            <input
+              type="email"
+              value={icloudEmail}
+              onChange={(e) => setIcloudEmail(e.target.value)}
+              placeholder="prenom@icloud.com"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">App-Specific Password</label>
+            <div className="flex gap-2">
+              <input
+                type={icloudPasswordVisible ? 'text' : 'password'}
+                value={icloudPassword}
+                onChange={(e) => setIcloudPassword(e.target.value)}
+                placeholder="xxxx-xxxx-xxxx-xxxx"
+                className="flex-1 font-mono text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <button
+                type="button"
+                onClick={() => setIcloudPasswordVisible((v) => !v)}
+                className="px-3 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50"
+              >
+                {icloudPasswordVisible ? 'Cacher' : 'Voir'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Stocké uniquement dans ton navigateur, jamais en base de données.</p>
+          </div>
+        </div>
+
+        {icloudError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{icloudError}</p>
+        )}
+
+        {!icloudImportDone ? (
+          <button
+            type="button"
+            onClick={handleIcloudImport}
+            disabled={icloudImporting || !icloudEmail || !icloudPassword}
+            className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-40"
+          >
+            {icloudImporting ? 'Analyse des emails…' : 'Importer les candidatures iCloud'}
+          </button>
+        ) : (
+          <p className="text-sm text-green-600 font-medium">✓ Import terminé !</p>
+        )}
+
+        {icloudApps && icloudApps.length === 0 && (
+          <p className="text-sm text-gray-500">Aucun email de candidature trouvé dans les 90 derniers jours.</p>
+        )}
+
+        {icloudApps && icloudApps.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 font-medium">
+              {icloudApps.length} candidature{icloudApps.length > 1 ? 's' : ''} trouvée{icloudApps.length > 1 ? 's' : ''} :
+            </p>
+            <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-lg divide-y divide-gray-100">
+              {icloudApps.map((app, i) => (
+                <label key={i} className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={icloudSelected.has(i)}
+                    onChange={() => {
+                      const next = new Set(icloudSelected)
+                      if (next.has(i)) next.delete(i)
+                      else next.add(i)
+                      setIcloudSelected(next)
+                    }}
+                    className="mt-0.5 accent-brand-600"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{app.title}</p>
+                    <p className="text-xs text-gray-500">{app.companyName} · {app.platform}{app.city ? ` · ${app.city}` : ''}</p>
+                    <p className="text-xs text-gray-400">{new Date(app.appliedAt).toLocaleDateString('fr-FR')}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleConfirmIcloudImport}
+                disabled={icloudSelected.size === 0 || confirmingIcloud}
+                className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-40"
+              >
+                {confirmingIcloud ? 'Import…' : `Importer ${icloudSelected.size} candidature${icloudSelected.size > 1 ? 's' : ''}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIcloudApps(null)}
+                className="text-sm text-gray-400 hover:text-gray-600"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Danger zone */}
