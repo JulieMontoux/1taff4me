@@ -272,11 +272,15 @@ export default function SettingsPage() {
     setIcloudError(null)
     saveIcloudCredentials()
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 55000)
       const res = await fetch('/api/icloud/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: icloudEmail, password: icloudPassword }),
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
       const data = await res.json()
       if (!res.ok) {
         setIcloudError(data.error ?? 'Erreur lors de l\'import.')
@@ -284,8 +288,9 @@ export default function SettingsPage() {
         setIcloudApps(data.applications)
         setIcloudSelected(new Set(data.applications.map((_: GmailApp, i: number) => i)))
       }
-    } catch {
-      setIcloudError('Erreur réseau.')
+    } catch (err) {
+      const isTimeout = err instanceof Error && err.name === 'AbortError'
+      setIcloudError(isTimeout ? 'Timeout : la connexion IMAP a pris trop de temps. Réessaie.' : 'Erreur réseau — vérifie ta connexion.')
     } finally {
       setIcloudImporting(false)
     }

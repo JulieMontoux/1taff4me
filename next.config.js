@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['imapflow'],
   compress: true,
   poweredByHeader: false,
   async headers() {

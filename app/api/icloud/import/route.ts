@@ -34,9 +34,10 @@ export async function POST(request: Request) {
 
   try {
     await client.connect()
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
     return Response.json(
-      { error: 'Connexion IMAP échouée. Vérifie ton email et App-Specific Password.' },
+      { error: `Connexion IMAP échouée : ${msg}. Vérifie ton email et App-Specific Password (appleid.apple.com → Sécurité → Mots de passe spécifiques).` },
       { status: 401 }
     )
   }
