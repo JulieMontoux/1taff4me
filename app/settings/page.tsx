@@ -515,7 +515,7 @@ export default function SettingsPage() {
           <div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Extension navigateur</p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-              Copie ce token dans les options de l'extension pour activer la détection automatique des candidatures (APEC, Indeed, LinkedIn, WTTJ, HelloWork).
+              Copie ce token dans les options de l&apos;extension pour activer la détection automatique des candidatures (APEC, Indeed, LinkedIn, WTTJ, HelloWork).
             </p>
           </div>
           {apiToken ? (
