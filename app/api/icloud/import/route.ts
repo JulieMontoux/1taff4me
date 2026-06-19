@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import Anthropic from '@anthropic-ai/sdk'
+import { parseJobEmail } from '@/lib/parse-job-email'
 
-const PLATFORMS = ['apec.fr', 'indeed', 'welcometothejungle', 'linkedin', 'hellowork']
+const PLATFORMS = ['apec.fr', 'indeed', 'welcometothejungle', 'linkedin', 'hellowork', 'francetravail', 'pole-emploi']
 
 const IMAP_HOST = 'imap.mail.me.com'
 const IMAP_PORT = 993
@@ -24,7 +24,6 @@ export async function POST(request: Request) {
       return Response.json({ error: 'email et password requis' }, { status: 400 })
     }
 
-    // Dynamic import — avoids webpack bundling issues with ESM package
     const { ImapFlow } = await import('imapflow')
 
     const client = new ImapFlow({
@@ -45,7 +44,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const emails: { from: string; subject: string; date: string; body: string }[] = []
+    const rawEmails: { from: string; subject: string; date: string; body: string }[] = []
 
     try {
       await client.mailboxOpen('INBOX')
@@ -81,71 +80,25 @@ export async function POST(request: Request) {
 
           if (!isConfirmation) continue
 
-          let body = ''
+          let bodyText = ''
           const part = msg.bodyParts?.get('1')
-          if (part) body = part.toString().slice(0, 2000)
+          if (part) bodyText = part.toString().slice(0, 3000)
 
-          emails.push({ from, subject, date, body })
-          if (emails.length >= 60) break
+          rawEmails.push({ from, subject, date, body: bodyText })
+          if (rawEmails.length >= 60) break
         }
       }
     } finally {
       try { await client.logout() } catch {}
     }
 
-    if (emails.length === 0) {
+    if (rawEmails.length === 0) {
       return Response.json({ applications: [], total: 0 })
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return Response.json({ error: 'ANTHROPIC_API_KEY non configurée' }, { status: 503 })
-    }
-    const ai = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const applications = rawEmails.map(parseJobEmail)
 
-    const emailsText = emails
-      .map((e, i) =>
-        `Email ${i + 1}:\nFrom: ${e.from}\nSubject: ${e.subject}\nDate: ${e.date}\nBody: ${e.body}`
-      )
-      .join('\n\n---\n\n')
-
-    const response = await ai.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      system: `Tu es un assistant qui extrait des informations de candidatures d'emploi depuis des emails.
-Pour chaque email qui est une confirmation de candidature envoyée, extrais:
-- title: intitulé du poste (string)
-- companyName: nom de l'entreprise (string)
-- platform: APEC, Indeed, LinkedIn, Welcome to the Jungle, ou HelloWork
-- appliedAt: date ISO 8601 (string)
-- offerUrl: URL de l'offre si présente (string ou null)
-- city: ville si mentionnée (string ou null)
-
-Retourne UNIQUEMENT un JSON array valide. Ignore les emails qui ne sont PAS des confirmations de candidature.
-Format: [{"title":"...","companyName":"...","platform":"...","appliedAt":"...","offerUrl":null,"city":null}]`,
-      messages: [
-        {
-          role: 'user',
-          content: `Voici les emails:\n\n${emailsText}\n\nRetourne uniquement le JSON array.`,
-        },
-      ],
-    })
-
-    let parsed: {
-      title: string
-      companyName: string
-      platform: string
-      appliedAt: string
-      offerUrl: string | null
-      city: string | null
-    }[] = []
-
-    try {
-      const text = response.content[0].type === 'text' ? response.content[0].text : ''
-      const match = text.match(/\[[\s\S]*\]/)
-      if (match) parsed = JSON.parse(match[0])
-    } catch {}
-
-    return Response.json({ applications: parsed, total: parsed.length })
+    return Response.json({ applications, total: applications.length })
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

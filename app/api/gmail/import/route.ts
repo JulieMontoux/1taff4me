@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import Anthropic from '@anthropic-ai/sdk'
+import { parseJobEmail } from '@/lib/parse-job-email'
 
 const PLATFORMS = [
   'apec.fr',
@@ -65,14 +65,6 @@ function extractEmailBody(payload: Record<string, unknown>): string {
   return ''
 }
 
-function detectPlatform(from: string): string {
-  if (from.includes('apec.fr')) return 'APEC'
-  if (from.includes('welcometothejungle.com')) return 'Welcome to the Jungle'
-  if (from.includes('linkedin.com')) return 'LinkedIn'
-  if (from.includes('indeed')) return 'Indeed'
-  if (from.includes('hellowork.com')) return 'HelloWork'
-  return 'Inconnu'
-}
 
 export async function POST() {
   const session = await getServerSession(authOptions)
@@ -132,64 +124,7 @@ export async function POST() {
     })
   )
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return Response.json({ error: 'ANTHROPIC_API_KEY non configurée' }, { status: 503 })
-  }
-  // Parse with Claude
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-  const emailsText = emailDetails
-    .map((e, i) =>
-      `Email ${i + 1}:\nFrom: ${e.from}\nSubject: ${e.subject}\nDate: ${e.date}\nBody: ${e.body}`
-    )
-    .join('\n\n---\n\n')
-
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4096,
-    system: `Tu es un assistant qui extrait des informations de candidatures d'emploi depuis des emails.
-Pour chaque email qui correspond à une confirmation de candidature envoyée, extrais:
-- title: intitulé du poste (string)
-- companyName: nom de l'entreprise (string)
-- platform: la plateforme (APEC, Indeed, LinkedIn, Welcome to the Jungle, HelloWork)
-- appliedAt: date de candidature ISO 8601 (string)
-- offerUrl: URL de l'offre si présente (string ou null)
-- city: ville si mentionnée (string ou null)
-
-Retourne UNIQUEMENT un JSON array valide. Ignore les emails qui ne sont PAS des confirmations de candidature envoyée.
-Format: [{"title": "...", "companyName": "...", "platform": "...", "appliedAt": "...", "offerUrl": null, "city": null}]`,
-    messages: [
-      {
-        role: 'user',
-        content: `Voici les emails à analyser:\n\n${emailsText}\n\nRetourne uniquement le JSON array.`,
-      },
-    ],
-  })
-
-  let parsed: {
-    title: string
-    companyName: string
-    platform: string
-    appliedAt: string
-    offerUrl: string | null
-    city: string | null
-  }[] = []
-
-  try {
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
-    if (jsonMatch) parsed = JSON.parse(jsonMatch[0])
-  } catch {
-    // parsing failed — return empty
-  }
-
-  // Enrich with platform detection from From header when missing
-  const applications = parsed.map((app, i) => ({
-    ...app,
-    platform: app.platform || detectPlatform(emailDetails[i]?.from ?? ''),
-    status: 'applied' as const,
-    tags: [app.platform || 'gmail-import'],
-  }))
+  const applications = emailDetails.map(parseJobEmail)
 
   return Response.json({ applications, total: applications.length })
 }
