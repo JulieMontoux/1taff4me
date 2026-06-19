@@ -7,6 +7,42 @@ export type ParsedJobEmail = {
   city: string | null
 }
 
+// Decode quoted-printable encoding (=20 → space, =\n → nothing, =XX → char)
+function decodeQuotedPrintable(str: string): string {
+  return str
+    .replace(/=\r?\n/g, '')           // soft line breaks
+    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+}
+
+// Strip HTML tags and decode common HTML entities
+function stripHtml(str: string): string {
+  return str
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/?(p|div|tr|td|li|h[1-6])[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+export function prepareBody(raw: string): string {
+  const decoded = decodeQuotedPrintable(raw)
+  // Detect HTML and strip if needed
+  if (/<[a-z][\s\S]*>/i.test(decoded)) {
+    return stripHtml(decoded)
+  }
+  return decoded.replace(/[ \t]+/g, ' ').trim()
+}
+
 function detectPlatform(from: string): string {
   const f = from.toLowerCase()
   if (f.includes('apec.fr')) return 'APEC'
@@ -70,15 +106,16 @@ function parseLinkedIn(subject: string, body: string): { title: string; companyN
   return { title: 'Poste non renseigné', companyName: 'Entreprise non renseignée' }
 }
 
-// APEC: subjects vary, body usually has "Intitulé du poste : X" and "Entreprise : Y"
+// APEC: subjects vary, body has "Intitulé du poste : X\n" and "Entreprise : Y\n"
 function parseAPEC(subject: string, body: string): { title: string; companyName: string } {
-  const titleMatch = body.match(/(?:intitulé du poste|poste|offre)[^\n:]*[:\s]+([^\n]{5,100})/i)
-  const companyMatch = body.match(/(?:entreprise|société|recruteur)[^\n:]*[:\s]+([^\n]{2,100})/i)
+  // Match label + colon + text until end of line, ignore short/garbage matches
+  const titleMatch = body.match(/(?:intitulé du poste|poste|offre)[^\n:]{0,20}:\s*([^\n<]{5,120})/i)
+  const companyMatch = body.match(/(?:entreprise|société|recruteur|employeur)[^\n:]{0,20}:\s*([^\n<]{2,120})/i)
 
   let title = titleMatch ? clean(titleMatch[1]) : 'Poste non renseigné'
   let companyName = companyMatch ? clean(companyMatch[1]) : 'Entreprise non renseignée'
 
-  // Try subject fallback: "Candidature - [TITLE] - [COMPANY]"
+  // Subject fallback: "Candidature - [TITLE] - [COMPANY]"
   if (title === 'Poste non renseigné') {
     const m = subject.match(/candidature\s*[-–]\s*(.+?)\s*[-–]\s*(.+?)(?:\s*[-–|]|$)/i)
     if (m) { title = clean(m[1]); companyName = clean(m[2]) }
@@ -117,26 +154,31 @@ export function parseJobEmail(email: {
   body: string
 }): ParsedJobEmail {
   const platform = detectPlatform(email.from)
-  const offerUrl = extractUrl(email.body, platform)
+  // Always clean body before regex matching
+  const cleanBody = prepareBody(email.body)
+  const offerUrl = extractUrl(cleanBody, platform)
 
   let title = 'Poste non renseigné'
   let companyName = 'Entreprise non renseignée'
 
   if (platform === 'Indeed') {
-    ;({ title, companyName } = parseIndeed(email.subject, email.body))
+    ;({ title, companyName } = parseIndeed(email.subject, cleanBody))
   } else if (platform === 'LinkedIn') {
-    ;({ title, companyName } = parseLinkedIn(email.subject, email.body))
+    ;({ title, companyName } = parseLinkedIn(email.subject, cleanBody))
   } else if (platform === 'APEC') {
-    ;({ title, companyName } = parseAPEC(email.subject, email.body))
+    ;({ title, companyName } = parseAPEC(email.subject, cleanBody))
   } else if (platform === 'Welcome to the Jungle') {
-    ;({ title, companyName } = parseWTTJ(email.subject, email.body))
+    ;({ title, companyName } = parseWTTJ(email.subject, cleanBody))
   } else if (platform === 'HelloWork') {
-    ;({ title, companyName } = parseHelloWork(email.subject, email.body))
+    ;({ title, companyName } = parseHelloWork(email.subject, cleanBody))
   } else {
-    // Generic: try common patterns
     const m = email.subject.match(/(?:pour|for)\s+(.+?)\s+(?:chez|at|à)\s+(.+?)(?:\s*[-–|]|$)/i)
     if (m) { title = clean(m[1]); companyName = clean(m[2]) }
   }
+
+  // Sanitize: strip any leftover HTML/encoding artifacts from extracted values
+  title = title.replace(/<[^>]+>/g, '').replace(/=\w{2}/g, '').trim() || 'Poste non renseigné'
+  companyName = companyName.replace(/<[^>]+>/g, '').replace(/=\w{2}/g, '').trim() || 'Entreprise non renseignée'
 
   return {
     title,
