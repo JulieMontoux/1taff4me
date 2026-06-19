@@ -97,7 +97,10 @@ export async function POST(request: Request) {
       return Response.json({ applications: [], total: 0 })
     }
 
-    const ai = new Anthropic()
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return Response.json({ error: 'ANTHROPIC_API_KEY non configurée' }, { status: 503 })
+    }
+    const ai = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
     const emailsText = emails
       .map((e, i) =>

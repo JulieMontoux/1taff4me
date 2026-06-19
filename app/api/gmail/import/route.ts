@@ -132,8 +132,11 @@ export async function POST() {
     })
   )
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return Response.json({ error: 'ANTHROPIC_API_KEY non configurée' }, { status: 503 })
+  }
   // Parse with Claude
-  const client = new Anthropic()
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   const emailsText = emailDetails
     .map((e, i) =>
