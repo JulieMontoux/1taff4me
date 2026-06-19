@@ -14,9 +14,10 @@
       max-width: 480px;
     }
     h1 { font-size: 18px; font-weight: 700; color: #7c3aed; margin-bottom: 24px; }
+    h2 { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
     label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
     p.hint { font-size: 12px; color: #9ca3af; margin-top: 4px; }
-    input[type="text"] {
+    input[type="text"], input[type="password"] {
       width: 100%;
       border: 1px solid #d1d5db;
       border-radius: 8px;
@@ -25,30 +26,65 @@
       outline: none;
       background: white;
       color: #111827;
+      font-family: monospace;
     }
-    input[type="text"]:focus { border-color: #7c3aed; box-shadow: 0 0 0 2px #ede9fe; }
-    .row { margin-bottom: 20px; }
+    input[type="text"]:focus, input[type="password"]:focus { border-color: #7c3aed; box-shadow: 0 0 0 2px #ede9fe; }
+    .row { margin-bottom: 24px; }
+    .input-row { display: flex; gap: 8px; }
+    .input-row input { flex: 1; }
     button {
       padding: 9px 20px;
       background: #7c3aed;
       color: white;
       border: none;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      white-space: nowrap;
     }
     button:hover { background: #6d28d9; }
+    button.secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+    button.secondary:hover { background: #f3f4f6; }
     #saved { display: none; font-size: 13px; color: #16a34a; margin-left: 12px; font-weight: 500; }
+    .section { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: #ede9fe; color: #7c3aed; margin-left: 8px; vertical-align: middle; }
+    a.link { color: #7c3aed; font-size: 12px; text-decoration: none; }
+    a.link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <h1>1taff4me — Options</h1>
 
-  <div class="row">
-    <label for="app-url">URL de votre instance</label>
-    <input type="text" id="app-url" placeholder="https://1taff4me.vercel.app" />
-    <p class="hint">L'URL de base de votre application 1taff4me (sans slash final).</p>
+  <div class="section">
+    <h2>Instance</h2>
+    <div class="row">
+      <label for="app-url">URL de votre application</label>
+      <input type="text" id="app-url" placeholder="https://1taff4me.vercel.app" />
+      <p class="hint">Sans slash final.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Détection automatique <span class="tag">Auto-candidature</span></h2>
+    <div class="row">
+      <label for="api-token">Token API</label>
+      <div class="input-row">
+        <input type="password" id="api-token" placeholder="Colle ton token API ici…" />
+        <button class="secondary" id="toggle-token">Voir</button>
+      </div>
+      <p class="hint">
+        Trouve ton token dans <strong>Paramètres → Intégrations</strong> de l'app.<br>
+        Il permet à l'extension d'enregistrer tes candidatures automatiquement.
+      </p>
+    </div>
+    <div style="margin-top:8px;">
+      <a class="link" id="open-settings" href="#">Ouvrir les paramètres →</a>
+    </div>
   </div>
 
   <div style="display:flex;align-items:center;">
