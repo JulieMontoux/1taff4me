@@ -281,16 +281,17 @@ export default function SettingsPage() {
         signal: controller.signal,
       })
       clearTimeout(timeout)
-      const data = await res.json()
+      let data: { error?: string; applications?: GmailApp[] } = {}
+      try { data = await res.json() } catch { /* non-JSON response */ }
       if (!res.ok) {
-        setIcloudError(data.error ?? 'Erreur lors de l\'import.')
+        setIcloudError(data.error ?? `Erreur serveur (${res.status}). Vérifie les logs Vercel.`)
       } else {
-        setIcloudApps(data.applications)
-        setIcloudSelected(new Set(data.applications.map((_: GmailApp, i: number) => i)))
+        setIcloudApps(data.applications ?? [])
+        setIcloudSelected(new Set((data.applications ?? []).map((_: GmailApp, i: number) => i)))
       }
     } catch (err) {
       const isTimeout = err instanceof Error && err.name === 'AbortError'
-      setIcloudError(isTimeout ? 'Timeout : la connexion IMAP a pris trop de temps. Réessaie.' : 'Erreur réseau — vérifie ta connexion.')
+      setIcloudError(isTimeout ? 'Timeout : la connexion IMAP a pris trop de temps. Réessaie.' : `Erreur fetch : ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setIcloudImporting(false)
     }
